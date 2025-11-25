@@ -105,13 +105,10 @@ export default function ScenesPage() {
 
   const loadStudentId = async () => {
     try {
-      const { data } = await supabase
-        .from('students')
-        .select('id')
-        .limit(1);
-
-      if (data && data.length > 0) {
-        setStudentId(data[0].id);
+      // Get student ID from session storage (created in journey page)
+      const sid = sessionStorage.getItem('studentId');
+      if (sid) {
+        setStudentId(sid);
       }
     } catch (error) {
       console.error('Error loading student:', error);

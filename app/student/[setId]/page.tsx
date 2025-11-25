@@ -77,63 +77,79 @@ export default function StudentJourneyPage() {
 
   const loadStudentProgress = async () => {
     try {
-      // Get first student (for prototype)
-      const { data: students } = await supabase
-        .from('students')
-        .select('id')
-        .limit(1);
+      // For prototype: Create a new student session on each hard refresh
+      // Session storage clears on hard refresh, localStorage persists
+      let sid: string | null = sessionStorage.getItem('studentId');
 
-      if (students && students.length > 0) {
-        const sid = students[0].id;
-        setStudentId(sid);
+      if (!sid) {
+        // Create a new anonymous student for this session
+        const { data: newStudent, error: createError } = await supabase
+          .from('students')
+          .insert({ name: `Student ${Date.now()}` })
+          .select('id')
+          .single();
 
-        // Load drawing progress from word_attempts
-        const { data: drawAttempts } = await supabase
-          .from('word_attempts')
-          .select('word_id, is_correct')
-          .eq('student_id', sid)
-          .eq('is_correct', true);
-
-        // Load spelling/scene progress from scene_attempts
-        const { data: sceneAttempts } = await supabase
-          .from('scene_attempts')
-          .select('scene_id, object_name, is_correct')
-          .eq('student_id', sid)
-          .eq('is_correct', true);
-
-        // Get word IDs from scene attempts by matching object names to words
-        const { data: wordsData } = await supabase
-          .from('words')
-          .select('id, text')
-          .eq('word_set_id', setId);
-
-        const progressMap: Record<string, WordProgress> = {};
-
-        // Mark words as drawn based on word_attempts
-        if (drawAttempts) {
-          drawAttempts.forEach(attempt => {
-            if (!progressMap[attempt.word_id]) {
-              progressMap[attempt.word_id] = { drawn: false, spelled: false };
-            }
-            progressMap[attempt.word_id].drawn = true;
-          });
+        if (createError || !newStudent || !newStudent.id) {
+          console.error('Error creating student:', createError);
+          return;
         }
 
-        // Mark words as spelled based on scene_attempts (object found + spelled in scene)
-        if (sceneAttempts && wordsData) {
-          sceneAttempts.forEach(attempt => {
-            const word = wordsData.find(w => w.text.toLowerCase() === attempt.object_name.toLowerCase());
-            if (word) {
-              if (!progressMap[word.id]) {
-                progressMap[word.id] = { drawn: false, spelled: false };
-              }
-              progressMap[word.id].spelled = true;
-            }
-          });
-        }
-
-        setProgress(progressMap);
+        const studentId = newStudent.id;
+        sessionStorage.setItem('studentId', studentId);
+        sid = studentId;
       }
+
+      // At this point sid is guaranteed to be a string (TypeScript narrowing)
+      if (!sid) return;
+
+      setStudentId(sid);
+
+      // Load drawing progress from word_attempts
+      const { data: drawAttempts } = await supabase
+        .from('word_attempts')
+        .select('word_id, is_correct')
+        .eq('student_id', sid)
+        .eq('is_correct', true);
+
+      // Load spelling/scene progress from scene_attempts
+      const { data: sceneAttempts } = await supabase
+        .from('scene_attempts')
+        .select('scene_id, object_name, is_correct')
+        .eq('student_id', sid)
+        .eq('is_correct', true);
+
+      // Get word IDs from scene attempts by matching object names to words
+      const { data: wordsData } = await supabase
+        .from('words')
+        .select('id, text')
+        .eq('word_set_id', setId);
+
+      const progressMap: Record<string, WordProgress> = {};
+
+      // Mark words as drawn based on word_attempts
+      if (drawAttempts) {
+        drawAttempts.forEach(attempt => {
+          if (!progressMap[attempt.word_id]) {
+            progressMap[attempt.word_id] = { drawn: false, spelled: false };
+          }
+          progressMap[attempt.word_id].drawn = true;
+        });
+      }
+
+      // Mark words as spelled based on scene_attempts (object found + spelled in scene)
+      if (sceneAttempts && wordsData) {
+        sceneAttempts.forEach(attempt => {
+          const word = wordsData.find(w => w.text.toLowerCase() === attempt.object_name.toLowerCase());
+          if (word) {
+            if (!progressMap[word.id]) {
+              progressMap[word.id] = { drawn: false, spelled: false };
+            }
+            progressMap[word.id].spelled = true;
+          }
+        });
+      }
+
+      setProgress(progressMap);
     } catch (error) {
       console.error('Error loading progress:', error);
     }
