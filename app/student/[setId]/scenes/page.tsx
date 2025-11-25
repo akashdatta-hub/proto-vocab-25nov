@@ -115,9 +115,42 @@ export default function ScenesPage() {
     }
   };
 
-  const handleSceneSelect = (scene: Scene) => {
+  const handleSceneSelect = async (scene: Scene) => {
     setSelectedScene(scene);
     playSound('sceneSelect', 0.5);
+
+    // Load scene objects with actual positions from database
+    await loadSceneObjects(scene.id);
+  };
+
+  const loadSceneObjects = async (sceneId: string) => {
+    try {
+      // Load scene_objects for this specific scene
+      const { data: sceneObjectsData, error } = await supabase
+        .from('scene_objects')
+        .select('*')
+        .eq('scene_id', sceneId);
+
+      if (error) {
+        console.error('Error loading scene objects:', error);
+        return;
+      }
+
+      if (sceneObjectsData && sceneObjectsData.length > 0) {
+        // Map database objects to our SceneObject interface
+        const objects: SceneObject[] = sceneObjectsData.map((obj: any) => ({
+          id: obj.id,
+          wordId: obj.word_id,
+          objectName: obj.object_name,
+          position: obj.position_data || { x: 50, y: 50 }, // Use stored position or default
+          found: false
+        }));
+        setSceneObjects(objects);
+        setCurrentObjectIndex(0); // Reset to first object
+      }
+    } catch (error) {
+      console.error('Error loading scene objects:', error);
+    }
   };
 
   const handleObjectClick = async (objectId: string) => {

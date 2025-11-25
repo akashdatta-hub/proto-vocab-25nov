@@ -123,6 +123,28 @@ export function SceneSilhouette({
             </div>
           )}
 
+          {/* Current object hint (pulsing silhouette circle) */}
+          {!allFound && currentObject && !currentObject.found && (
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{
+                scale: [1, 1.1, 1],
+                opacity: [0.3, 0.5, 0.3]
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+              className="absolute w-24 h-24 rounded-full border-4 border-amber-400 bg-amber-400/10 pointer-events-none"
+              style={{
+                left: `${currentObject.position.x}%`,
+                top: `${currentObject.position.y}%`,
+                transform: 'translate(-50%, -50%)'
+              }}
+            />
+          )}
+
           {/* Object markers (for found objects) */}
           {objects.map((obj) =>
             obj.found ? (
