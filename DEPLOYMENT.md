@@ -44,16 +44,55 @@ Visit [http://localhost:3000](http://localhost:3000)
 
 ## ☁️ Vercel Deployment
 
+### Project Links
+- **GitHub Repository:** https://github.com/akashdatta-hub/proto-vocab-25nov
+- **Vercel Project:** https://vercel.com/akashs-projects-7ee4774b/proto-vocab-25nov
+
 ### Prerequisites
 - GitHub repository pushed
 - Vercel account connected to GitHub
 - All API credentials ready
 
-### Step 1: Connect Repository
+### Deployment Method: Git-based (Recommended)
 
-1. Go to [Vercel Dashboard](https://vercel.com/new)
-2. Import your GitHub repository: `akashdatta-hub/proto-vocab-25nov`
-3. Select the `proto-vocab-app` folder as the root directory
+**All deployments should be done through Git.** Vercel automatically deploys when you push to GitHub.
+
+#### Option A: Deploy via Git Push (Primary Method)
+
+```bash
+# Make your changes
+git add .
+git commit -m "Your commit message"
+git push origin main
+
+# Vercel will automatically deploy
+# Monitor at: https://vercel.com/akashs-projects-7ee4774b/proto-vocab-25nov
+```
+
+#### Option B: Deploy via Vercel CLI (Alternative)
+
+```bash
+# Install Vercel CLI if needed
+npm i -g vercel
+
+# Link to existing project
+vercel link
+
+# Deploy to preview
+vercel
+
+# Deploy to production
+vercel --prod
+```
+
+### Step 1: Initial Setup (First Time Only)
+
+If not already connected:
+
+1. Go to https://vercel.com/akashs-projects-7ee4774b/proto-vocab-25nov
+2. Or create new: https://vercel.com/new
+3. Import GitHub repository: `akashdatta-hub/proto-vocab-25nov`
+4. Select the `proto-vocab-app` folder as the root directory
 
 ### Step 2: Configure Build Settings
 
@@ -250,6 +289,107 @@ If you encounter issues:
 2. Review Supabase logs
 3. Test API routes individually
 4. Verify all environment variables are set
+
+---
+
+## 🔄 Development Workflow
+
+### Standard Git Workflow
+
+```bash
+# 1. Pull latest changes
+git pull origin main
+
+# 2. Make your changes
+# ... edit files ...
+
+# 3. Test locally
+npm run dev
+npm run build  # Test production build
+
+# 4. Commit with descriptive message
+git add .
+git commit -m "feat: Add new component
+
+- Detailed description
+- What was changed
+- Why it was changed
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+
+# 5. Push to GitHub
+git push origin main
+
+# 6. Verify deployment on Vercel
+# Visit: https://vercel.com/akashs-projects-7ee4774b/proto-vocab-25nov
+# Check: https://proto-vocab-25nov.vercel.app (or your custom domain)
+```
+
+### Using Vercel CLI for Quick Previews
+
+```bash
+# Deploy to preview (doesn't affect production)
+vercel
+
+# This gives you a preview URL to test changes before merging to main
+
+# If satisfied, deploy to production
+vercel --prod
+```
+
+### Branch Strategy (Optional)
+
+For larger features, consider using feature branches:
+
+```bash
+# Create feature branch
+git checkout -b feature/new-component
+
+# Make changes and commit
+git add .
+git commit -m "feat: Add new component"
+
+# Push feature branch (creates preview deployment on Vercel)
+git push origin feature/new-component
+
+# Merge to main when ready
+git checkout main
+git merge feature/new-component
+git push origin main
+```
+
+### Quick Commands Reference
+
+```bash
+# Local development
+npm run dev              # Start dev server
+npm run build            # Test production build
+npm run start            # Run production build locally
+
+# Git operations
+git status               # Check changes
+git log --oneline        # View commit history
+git diff                 # See unstaged changes
+
+# Vercel CLI
+vercel                   # Preview deployment
+vercel --prod            # Production deployment
+vercel logs              # View deployment logs
+vercel env ls            # List environment variables
+vercel env add           # Add environment variable
+```
+
+### CI/CD Setup (Automatic)
+
+Vercel is already configured for automatic deployments:
+
+- **Push to `main`** → Automatic production deployment
+- **Push to other branches** → Automatic preview deployment
+- **Pull requests** → Preview deployment with unique URL
+
+Monitor all deployments at: https://vercel.com/akashs-projects-7ee4774b/proto-vocab-25nov/deployments
 
 ---
 
