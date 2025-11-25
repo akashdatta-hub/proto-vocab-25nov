@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { CircularProgress } from '@/components/shared/ProgressBar';
 import { playSound } from '@/lib/sound-effects';
 import { VolumeControl } from '@/components/shared/AudioButton';
+import { Lock } from 'lucide-react';
 
 interface WordSet {
   id: string;
@@ -151,6 +152,13 @@ export default function Home() {
             const wordsCompleted = progress[wordSet.id] || 0;
             const totalWords = 4; // Each set has 4 words
 
+            // Check if previous set is complete (for progressive unlock)
+            const previousSet = index > 0 ? wordSets[index - 1] : null;
+            const previousSetCompleted = previousSet
+              ? (progress[previousSet.id] || 0) === totalWords
+              : true; // First set is always unlocked
+            const isLocked = !previousSetCompleted;
+
             return (
               <motion.div
                 key={wordSet.id}
@@ -160,8 +168,13 @@ export default function Home() {
               >
                 <Button
                   variant="outline"
-                  onClick={() => handleSelectWordSet(wordSet.id)}
-                  className="w-full h-auto p-0 overflow-hidden border-2 border-zinc-300 hover:border-amber-400 transition-all duration-300 group"
+                  onClick={() => !isLocked && handleSelectWordSet(wordSet.id)}
+                  disabled={isLocked}
+                  className={`w-full h-auto p-0 overflow-hidden border-2 transition-all duration-300 group ${
+                    isLocked
+                      ? 'border-zinc-200 bg-zinc-50 opacity-60 cursor-not-allowed'
+                      : 'border-zinc-300 hover:border-amber-400'
+                  }`}
                 >
                   <div className="w-full p-6 text-left">
                     <div className="flex items-start justify-between mb-4">
@@ -186,7 +199,12 @@ export default function Home() {
 
                     {/* Progress text */}
                     <div className="flex items-center gap-2 text-sm">
-                      {wordsCompleted === totalWords ? (
+                      {isLocked ? (
+                        <span className="flex items-center gap-2 text-zinc-400 font-medium">
+                          <Lock className="w-4 h-4" />
+                          <span>Complete {previousSet?.name} to unlock</span>
+                        </span>
+                      ) : wordsCompleted === totalWords ? (
                         <span className="flex items-center gap-1 text-green-600 font-medium">
                           <span>✓</span>
                           <span>Complete!</span>
