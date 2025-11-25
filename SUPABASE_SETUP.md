@@ -8,11 +8,11 @@ Complete guide for setting up Supabase database, storage, and policies for the D
 
 ## ✅ Phase 2 Checklist
 
-- [ ] 1. Run database schema SQL
-- [ ] 2. Create storage buckets
-- [ ] 3. Set bucket policies
-- [ ] 4. Initialize database with word sets
-- [ ] 5. Verify setup
+- [x] 1. Run database schema SQL ✅
+- [ ] 2. Create storage buckets (manual)
+- [ ] 3. Set bucket policies (manual)
+- [x] 4. Initialize database with word sets ✅
+- [x] 5. Verify setup ✅
 - [ ] 6. Generate scene images (Phase 4)
 
 ---
@@ -337,15 +337,22 @@ SUPABASE_SERVICE_ROLE_KEY=sb_secret_fszeKg2hLGtj42Od95n5zg_Aw82Rnec
 
 ## ✅ Phase 2 Complete Criteria
 
-- [x] Database schema created (8 tables)
-- [x] Storage buckets created (3 buckets)
-- [x] Storage policies configured (public read/write)
-- [x] Word sets initialized (4 sets, 16 words)
-- [x] Students created (3 default profiles)
-- [x] Scene placeholders created (16 records)
+- [x] Database schema created (8 tables) ✅
+- [ ] Storage buckets created (3 buckets) - **Manual setup required**
+- [ ] Storage policies configured (public read/write) - **Manual setup required**
+- [x] Word sets initialized (4 sets, 16 words) ✅
+- [x] Students created (3 default profiles) ✅
+- [x] Scene placeholders created (16 records) ✅
 - [ ] Scene images generated (Phase 4)
 
 ---
 
-**Status:** Ready for Phase 3 (Core UI Components) after completing checklist
-**Next:** Build NotebookLayout, DrawingCanvas, LetterBank components
+**Status:** Database setup complete. Storage buckets need manual creation before Phase 4.
+**Current Progress:**
+- ✅ Supabase database initialized with 4 word sets (Garden, Kitchen, Beach, Birthday)
+- ✅ 16 words inserted (4 per set)
+- ✅ 16 scene placeholders created (images to be generated in Phase 4)
+- ✅ 3 default students created
+- ⏳ Storage buckets (scene-images, hint-images, student-drawings) - **need manual setup**
+
+**Next:** Phase 3 - Build NotebookLayout, DrawingCanvas, LetterBank components
