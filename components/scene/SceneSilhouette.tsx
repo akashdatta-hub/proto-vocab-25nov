@@ -5,13 +5,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { playSound } from '@/lib/sound-effects';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { SpellingInterface } from './SpellingInterface';
 
 interface SceneObject {
   id: string;
   wordId: string;
   objectName: string;
   position: { x: number; y: number };
+  boundingBox?: { x: number; y: number; width: number; height: number };
+  silhouetteUrl?: string;
   found: boolean;
 }
 
@@ -26,14 +28,13 @@ interface SceneSilhouetteProps {
 }
 
 /**
- * SceneSilhouette - Interactive scene with clickable objects
+ * SceneSilhouette - Interactive scene with silhouette masks and spelling
  *
  * Features:
- * - Full scene display with overlay
- * - Highlighted clickable regions for objects
- * - Progress through objects one at a time
- * - Visual feedback for correct/incorrect clicks
- * - Completion celebration
+ * - Clickable silhouette overlays for each unfound object
+ * - Spelling interface appears on click
+ * - Silhouette reveals actual object on correct spelling
+ * - Progress tracking for all objects
  */
 export function SceneSilhouette({
   imageUrl,
@@ -44,71 +45,59 @@ export function SceneSilhouette({
   onNextObject,
   className = ''
 }: SceneSilhouetteProps) {
-  const [clickFeedback, setClickFeedback] = React.useState<{
-    x: number;
-    y: number;
-    isCorrect: boolean;
-  } | null>(null);
+  const [spellingObject, setSpellingObject] = React.useState<SceneObject | null>(null);
 
-  const currentObject = objects[currentObjectIndex];
   const allFound = objects.every((obj) => obj.found);
 
-  const handleSceneClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!currentObject || currentObject.found) return;
+  const handleSilhouetteClick = (obj: SceneObject) => {
+    if (obj.found) return;
+    playSound('click', 0.4);
+    setSpellingObject(obj);
+  };
 
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
+  const handleSpellingCorrect = () => {
+    if (!spellingObject) return;
 
-    // Check if click is near the current object (within 15% tolerance)
-    const distance = Math.sqrt(
-      Math.pow(x - currentObject.position.x, 2) +
-      Math.pow(y - currentObject.position.y, 2)
-    );
+    // Mark object as found
+    onObjectClick?.(spellingObject.id);
 
-    const isCorrect = distance < 15;
+    // Close spelling interface
+    setTimeout(() => {
+      setSpellingObject(null);
+      onNextObject?.();
+    }, 500);
+  };
 
-    setClickFeedback({ x, y, isCorrect });
-
-    if (isCorrect) {
-      playSound('success', 0.5);
-      onObjectClick?.(currentObject.id);
-
-      // Clear feedback and move to next after delay
-      setTimeout(() => {
-        setClickFeedback(null);
-        onNextObject?.();
-      }, 1500);
-    } else {
-      playSound('error', 0.3);
-      setTimeout(() => setClickFeedback(null), 1000);
-    }
+  const handleSpellingClose = () => {
+    playSound('click', 0.3);
+    setSpellingObject(null);
   };
 
   return (
     <div className={cn('space-y-6', className)}>
-      {/* Current object prompt */}
-      {!allFound && currentObject && (
+      {/* Instructions */}
+      {!allFound && (
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-center p-6 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-lg"
         >
-          <p className="text-lg text-zinc-600 mb-2">Find this object:</p>
-          <h2 className="text-3xl md:text-4xl font-bold text-zinc-800 capitalize">
-            {currentObject.objectName}
-          </h2>
+          <p className="text-lg text-zinc-700 mb-2">
+            Click on the <span className="font-bold text-amber-600">silhouette objects</span> to spell their names!
+          </p>
+          <p className="text-sm text-zinc-600">
+            Spell correctly to reveal the actual object underneath
+          </p>
         </motion.div>
       )}
 
-      {/* Scene image with clickable areas */}
+      {/* Scene with silhouette overlays */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="relative rounded-xl overflow-hidden border-4 border-zinc-300 shadow-2xl cursor-crosshair"
-        onClick={handleSceneClick}
+        className="relative rounded-xl overflow-hidden border-4 border-zinc-300 shadow-2xl"
       >
-        {/* Scene image */}
+        {/* Base scene image */}
         <div className="relative aspect-video w-full bg-zinc-100">
           {imageUrl ? (
             <Image
@@ -116,6 +105,7 @@ export function SceneSilhouette({
               alt={`${sceneWord} scene`}
               fill
               className="object-cover"
+              priority
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-zinc-100 to-zinc-200">
@@ -123,67 +113,107 @@ export function SceneSilhouette({
             </div>
           )}
 
-          {/* Current object hint (pulsing silhouette circle) */}
-          {!allFound && currentObject && !currentObject.found && (
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{
-                scale: [1, 1.1, 1],
-                opacity: [0.3, 0.5, 0.3]
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-              className="absolute w-24 h-24 rounded-full border-4 border-amber-400 bg-amber-400/10 pointer-events-none"
-              style={{
-                left: `${currentObject.position.x}%`,
-                top: `${currentObject.position.y}%`,
-                transform: 'translate(-50%, -50%)'
-              }}
-            />
-          )}
+          {/* Silhouette overlays for unfound objects */}
+          {objects.map((obj) => {
+            if (obj.found) return null;
 
-          {/* Object markers (for found objects) */}
-          {objects.map((obj) =>
-            obj.found ? (
+            // Use bounding box if available, otherwise fallback to centered position
+            const bbox = obj.boundingBox || {
+              x: obj.position.x - 12,
+              y: obj.position.y - 12,
+              width: 24,
+              height: 24
+            };
+
+            return (
               <motion.div
                 key={obj.id}
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="absolute w-8 h-8 bg-green-500 rounded-full border-3 border-white shadow-lg flex items-center justify-center text-white font-bold"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                className="absolute cursor-pointer group"
                 style={{
-                  left: `${obj.position.x}%`,
-                  top: `${obj.position.y}%`,
-                  transform: 'translate(-50%, -50%)'
+                  left: `${bbox.x}%`,
+                  top: `${bbox.y}%`,
+                  width: `${bbox.width}%`,
+                  height: `${bbox.height}%`
                 }}
+                onClick={() => handleSilhouetteClick(obj)}
               >
-                ✓
-              </motion.div>
-            ) : null
-          )}
+                {obj.silhouetteUrl ? (
+                  // If we have a silhouette mask, use it
+                  <Image
+                    src={obj.silhouetteUrl}
+                    alt={`${obj.objectName} silhouette`}
+                    fill
+                    className="object-contain pointer-events-none"
+                  />
+                ) : (
+                  // Fallback: Dark semi-transparent overlay with question mark
+                  <div className="w-full h-full relative">
+                    {/* Dark overlay */}
+                    <div className="absolute inset-0 bg-black/70 rounded-2xl backdrop-blur-[2px] group-hover:bg-black/80 transition-colors" />
 
-          {/* Click feedback */}
-          <AnimatePresence>
-            {clickFeedback && (
-              <motion.div
-                initial={{ scale: 0, opacity: 1 }}
-                animate={{ scale: 2, opacity: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.6 }}
-                className={cn(
-                  'absolute w-16 h-16 rounded-full border-4',
-                  clickFeedback.isCorrect
-                    ? 'border-green-500 bg-green-500/20'
-                    : 'border-red-500 bg-red-500/20'
+                    {/* Pulsing border */}
+                    <motion.div
+                      animate={{
+                        scale: [1, 1.05, 1],
+                        opacity: [0.5, 0.8, 0.5]
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
+                      className="absolute inset-0 border-4 border-amber-400 rounded-2xl pointer-events-none"
+                    />
+
+                    {/* Question mark icon */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <motion.div
+                        animate={{
+                          y: [0, -5, 0]
+                        }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                        className="text-white text-4xl md:text-6xl font-bold opacity-80"
+                      >
+                        ?
+                      </motion.div>
+                    </div>
+
+                    {/* Hover label */}
+                    <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-amber-500 text-white px-3 py-1 rounded-full text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                      Click to spell!
+                    </div>
+                  </div>
                 )}
-                style={{
-                  left: `${clickFeedback.x}%`,
-                  top: `${clickFeedback.y}%`,
-                  transform: 'translate(-50%, -50%)'
-                }}
-              />
+              </motion.div>
+            );
+          })}
+
+          {/* Green checkmarks for found objects */}
+          <AnimatePresence>
+            {objects.map((obj) =>
+              obj.found ? (
+                <motion.div
+                  key={`found-${obj.id}`}
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  exit={{ scale: 0 }}
+                  className="absolute w-12 h-12 bg-green-500 rounded-full border-4 border-white shadow-xl flex items-center justify-center text-white font-bold text-2xl z-10"
+                  style={{
+                    left: `${obj.position.x}%`,
+                    top: `${obj.position.y}%`,
+                    transform: 'translate(-50%, -50%)'
+                  }}
+                >
+                  ✓
+                </motion.div>
+              ) : null
             )}
           </AnimatePresence>
         </div>
@@ -198,8 +228,6 @@ export function SceneSilhouette({
               'w-3 h-3 rounded-full transition-all duration-300',
               obj.found
                 ? 'bg-green-500 scale-110'
-                : index === currentObjectIndex
-                ? 'bg-amber-400 scale-125 animate-pulse'
                 : 'bg-zinc-300'
             )}
           />
@@ -222,6 +250,17 @@ export function SceneSilhouette({
           </p>
         </motion.div>
       )}
+
+      {/* Spelling Interface Modal */}
+      <AnimatePresence>
+        {spellingObject && (
+          <SpellingInterface
+            word={spellingObject.objectName}
+            onCorrect={handleSpellingCorrect}
+            onClose={handleSpellingClose}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -254,8 +293,6 @@ export function SceneObjectsList({
               'flex items-center gap-3 p-3 rounded-lg transition-all',
               obj.found
                 ? 'bg-green-100 text-green-700'
-                : index === currentObjectIndex
-                ? 'bg-amber-100 text-amber-700 font-medium'
                 : 'bg-zinc-50 text-zinc-600'
             )}
           >
@@ -264,8 +301,6 @@ export function SceneObjectsList({
                 'w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold',
                 obj.found
                   ? 'bg-green-500 text-white'
-                  : index === currentObjectIndex
-                  ? 'bg-amber-500 text-white'
                   : 'bg-zinc-300 text-zinc-600'
               )}
             >

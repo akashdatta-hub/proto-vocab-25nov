@@ -28,6 +28,8 @@ interface SceneObject {
   wordId: string;
   objectName: string;
   position: { x: number; y: number };
+  boundingBox?: { x: number; y: number; width: number; height: number };
+  silhouetteUrl?: string;
   found: boolean;
 }
 
@@ -155,12 +157,18 @@ export default function ScenesPage() {
 
   const handleObjectClick = async (objectId: string) => {
     const objectIndex = sceneObjects.findIndex(obj => obj.id === objectId);
-    if (objectIndex === -1 || objectIndex !== currentObjectIndex) return;
+    if (objectIndex === -1) return;
 
     // Mark object as found
     const updatedObjects = [...sceneObjects];
     updatedObjects[objectIndex].found = true;
     setSceneObjects(updatedObjects);
+
+    // Update current index to next unfound object
+    const nextUnfoundIndex = updatedObjects.findIndex(obj => !obj.found);
+    if (nextUnfoundIndex !== -1) {
+      setCurrentObjectIndex(nextUnfoundIndex);
+    }
 
     // Log scene attempt to database
     if (studentId && selectedScene) {
