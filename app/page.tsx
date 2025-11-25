@@ -53,45 +53,61 @@ export default function Home() {
   };
 
   const loadStudentProgress = async () => {
-    // For prototype, use first student or create a session student
+    // For prototype: Create a new student session on each hard refresh
+    // Session storage clears on hard refresh, localStorage persists
     try {
-      const { data: students } = await supabase
-        .from('students')
-        .select('id')
-        .limit(1);
+      let sid: string | null = sessionStorage.getItem('studentId');
 
-      if (students && students.length > 0) {
-        const studentId = students[0].id;
-        setStudentId(studentId);
+      if (!sid) {
+        // Create a new anonymous student for this session
+        const { data: newStudent, error: createError } = await supabase
+          .from('students')
+          .insert({ name: `Student ${Date.now()}` })
+          .select('id')
+          .single();
 
-        // Load word attempts for this student
-        const { data: attempts } = await supabase
-          .from('word_attempts')
-          .select('word_id, is_correct')
-          .eq('student_id', studentId)
-          .eq('is_correct', true);
+        if (createError || !newStudent || !newStudent.id) {
+          console.error('Error creating student:', createError);
+          return;
+        }
 
-        // Count correct attempts per word set
-        if (attempts) {
-          const { data: words } = await supabase
-            .from('words')
-            .select('id, word_set_id');
+        const studentId = newStudent.id;
+        sessionStorage.setItem('studentId', studentId);
+        sid = studentId;
+      }
 
-          if (words) {
-            const correctWordIds = new Set((attempts as WordAttempt[]).map(a => a.word_id));
-            const progressBySet: Record<string, number> = {};
+      // At this point sid is guaranteed to be a string
+      if (!sid) return;
 
-            words.forEach(word => {
-              if (!progressBySet[word.word_set_id]) {
-                progressBySet[word.word_set_id] = 0;
-              }
-              if (correctWordIds.has(word.id)) {
-                progressBySet[word.word_set_id]++;
-              }
-            });
+      setStudentId(sid);
 
-            setProgress(progressBySet);
-          }
+      // Load word attempts for this student
+      const { data: attempts } = await supabase
+        .from('word_attempts')
+        .select('word_id, is_correct')
+        .eq('student_id', sid)
+        .eq('is_correct', true);
+
+      // Count correct attempts per word set
+      if (attempts) {
+        const { data: words } = await supabase
+          .from('words')
+          .select('id, word_set_id');
+
+        if (words) {
+          const correctWordIds = new Set((attempts as WordAttempt[]).map(a => a.word_id));
+          const progressBySet: Record<string, number> = {};
+
+          words.forEach(word => {
+            if (!progressBySet[word.word_set_id]) {
+              progressBySet[word.word_set_id] = 0;
+            }
+            if (correctWordIds.has(word.id)) {
+              progressBySet[word.word_set_id]++;
+            }
+          });
+
+          setProgress(progressBySet);
         }
       }
     } catch (error) {
