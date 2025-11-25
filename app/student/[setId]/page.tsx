@@ -160,6 +160,20 @@ export default function StudentJourneyPage() {
   const wordsDrawn = Object.values(progress).filter(p => p.drawn).length;
   const wordsSpelled = Object.values(progress).filter(p => p.spelled).length;
   const wordsCompleted = Object.values(progress).filter(p => p.drawn && p.spelled).length;
+  const allWordsDrawn = wordsDrawn === words.length;
+
+  // Auto-navigate to scenes when all words are drawn
+  React.useEffect(() => {
+    if (allWordsDrawn && words.length > 0) {
+      // Wait 1.5 seconds to show the completion message, then navigate
+      const timer = setTimeout(() => {
+        playSound('sceneSelect', 0.5);
+        router.push(`/student/${setId}/scenes`);
+      }, 1500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [allWordsDrawn, words.length, setId, router]);
 
   const handleBack = () => {
     playSound('click', 0.4);
@@ -203,8 +217,6 @@ export default function StudentJourneyPage() {
       </NotebookLayout>
     );
   }
-
-  const allWordsDrawn = wordsDrawn === words.length;
 
   return (
     <NotebookLayout>
@@ -309,26 +321,23 @@ export default function StudentJourneyPage() {
           </div>
         </motion.div>
 
-        {/* Scenes button (available after drawing all words) */}
+        {/* Auto-navigate message (shown briefly before navigating to scenes) */}
         {allWordsDrawn && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
             className="p-8 bg-gradient-to-br from-green-50 to-emerald-50 border-3 border-green-300 rounded-2xl text-center"
           >
-            <Sparkles className="w-12 h-12 text-green-600 mx-auto mb-4" />
+            <Sparkles className="w-12 h-12 text-green-600 mx-auto mb-4 animate-pulse" />
             <h3 className="text-2xl font-bold text-green-800 mb-2">
               🎉 All Words Drawn!
             </h3>
-            <p className="text-green-700 mb-6">
-              You've drawn all {words.length} words! Now explore the {wordSet.scene_word} scene to find and spell them!
+            <p className="text-green-700 mb-2">
+              You've drawn all {words.length} words!
             </p>
-            <Button
-              onClick={handleViewScenes}
-              className="bg-green-600 hover:bg-green-700 text-white px-8 py-6 text-lg"
-            >
-              Explore the Scene →
-            </Button>
+            <p className="text-green-600 font-medium text-lg">
+              Loading {wordSet.scene_word} scene challenge...
+            </p>
           </motion.div>
         )}
       </div>
