@@ -39,3 +39,5 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+proto-vocab-25nov-6037e86dbb9e.json
+.env.local
