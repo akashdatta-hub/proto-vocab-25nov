@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { CircularProgress } from '@/components/shared/ProgressBar';
 import { playSound } from '@/lib/sound-effects';
 import { VolumeControl } from '@/components/shared/AudioButton';
-import { Lock } from 'lucide-react';
+import { Lock, MoreVertical, RotateCcw, Users } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface WordSet {
   id: string;
@@ -121,6 +122,22 @@ export default function Home() {
     router.push(`/student/${wordSetId}`);
   };
 
+  const handleResetProgress = () => {
+    playSound('click', 0.4);
+    // Clear session storage to reset progress
+    sessionStorage.clear();
+    // Reload the page to create new student session
+    window.location.reload();
+  };
+
+  const handleSwitchProfile = () => {
+    playSound('click', 0.4);
+    // For now, just clear session and reload (creates new student)
+    // In future, this could show a profile selection dialog
+    sessionStorage.clear();
+    window.location.reload();
+  };
+
   if (loading) {
     return (
       <NotebookLayout>
@@ -143,7 +160,34 @@ export default function Home() {
             title="Draw & Learn Notebook"
             subtitle="Choose a word set to start learning!"
           />
-          <VolumeControl />
+          <div className="flex items-center gap-2">
+            <VolumeControl />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10"
+                >
+                  <MoreVertical className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={handleSwitchProfile}>
+                  <Users className="mr-2 h-4 w-4" />
+                  <span>Switch Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleResetProgress}
+                  className="text-red-600 focus:text-red-600"
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  <span>Reset Progress</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
         {/* Word sets grid */}
