@@ -27,9 +27,19 @@ let ttsClient: TextToSpeechClient | null = null;
 
 function getTTSClient(): TextToSpeechClient {
   if (!ttsClient) {
-    // Google Cloud credentials are loaded from GOOGLE_APPLICATION_CREDENTIALS env var
-    // which points to the JSON credentials file
-    ttsClient = new TextToSpeechClient();
+    // Google Cloud credentials can be loaded from either:
+    // 1. GOOGLE_APPLICATION_CREDENTIALS_JSON env var (for Vercel deployment)
+    // 2. GOOGLE_APPLICATION_CREDENTIALS file path (for local development)
+    const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+
+    if (credentialsJson) {
+      // Parse JSON credentials from environment variable (Vercel)
+      const credentials = JSON.parse(credentialsJson);
+      ttsClient = new TextToSpeechClient({ credentials });
+    } else {
+      // Use file path from GOOGLE_APPLICATION_CREDENTIALS (local)
+      ttsClient = new TextToSpeechClient();
+    }
   }
   return ttsClient;
 }
