@@ -87,26 +87,52 @@ export default function StudentJourneyPage() {
         const sid = students[0].id;
         setStudentId(sid);
 
-        // Load word attempts for this student and word set
-        const { data: attempts } = await supabase
+        // Load drawing progress from word_attempts
+        const { data: drawAttempts } = await supabase
           .from('word_attempts')
           .select('word_id, is_correct')
           .eq('student_id', sid)
           .eq('is_correct', true);
 
-        if (attempts) {
-          const progressMap: Record<string, WordProgress> = {};
-          attempts.forEach(attempt => {
+        // Load spelling/scene progress from scene_attempts
+        const { data: sceneAttempts } = await supabase
+          .from('scene_attempts')
+          .select('scene_id, object_name, is_correct')
+          .eq('student_id', sid)
+          .eq('is_correct', true);
+
+        // Get word IDs from scene attempts by matching object names to words
+        const { data: wordsData } = await supabase
+          .from('words')
+          .select('id, text')
+          .eq('word_set_id', setId);
+
+        const progressMap: Record<string, WordProgress> = {};
+
+        // Mark words as drawn based on word_attempts
+        if (drawAttempts) {
+          drawAttempts.forEach(attempt => {
             if (!progressMap[attempt.word_id]) {
               progressMap[attempt.word_id] = { drawn: false, spelled: false };
             }
-            // Assume first correct attempt is drawing, second is spelling
-            // In real implementation, track this in the database
             progressMap[attempt.word_id].drawn = true;
-            progressMap[attempt.word_id].spelled = true;
           });
-          setProgress(progressMap);
         }
+
+        // Mark words as spelled based on scene_attempts (object found + spelled in scene)
+        if (sceneAttempts && wordsData) {
+          sceneAttempts.forEach(attempt => {
+            const word = wordsData.find(w => w.text.toLowerCase() === attempt.object_name.toLowerCase());
+            if (word) {
+              if (!progressMap[word.id]) {
+                progressMap[word.id] = { drawn: false, spelled: false };
+              }
+              progressMap[word.id].spelled = true;
+            }
+          });
+        }
+
+        setProgress(progressMap);
       }
     } catch (error) {
       console.error('Error loading progress:', error);
@@ -115,6 +141,8 @@ export default function StudentJourneyPage() {
 
   const currentWord = words[currentWordIndex];
   const currentProgress = currentWord ? progress[currentWord.id] : null;
+  const wordsDrawn = Object.values(progress).filter(p => p.drawn).length;
+  const wordsSpelled = Object.values(progress).filter(p => p.spelled).length;
   const wordsCompleted = Object.values(progress).filter(p => p.drawn && p.spelled).length;
 
   const handleBack = () => {
@@ -127,10 +155,6 @@ export default function StudentJourneyPage() {
     router.push(`/student/${setId}/draw/${currentWord.id}`);
   };
 
-  const handleStartSpelling = () => {
-    playSound('select', 0.5);
-    router.push(`/student/${setId}/spell/${currentWord.id}`);
-  };
 
   const handleViewScenes = () => {
     playSound('sceneSelect', 0.5);
@@ -164,7 +188,7 @@ export default function StudentJourneyPage() {
     );
   }
 
-  const allWordsComplete = wordsCompleted === words.length;
+  const allWordsDrawn = wordsDrawn === words.length;
 
   return (
     <NotebookLayout>
@@ -190,9 +214,9 @@ export default function StudentJourneyPage() {
 
         {/* Overall progress */}
         <ProgressBar
-          current={wordsCompleted}
+          current={wordsDrawn}
           total={words.length}
-          label="Words completed"
+          label="Words drawn"
           showFraction={true}
         />
 
@@ -222,9 +246,8 @@ export default function StudentJourneyPage() {
             )}
           </div>
 
-          {/* Activities */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-            {/* Drawing activity */}
+          {/* Drawing Activity */}
+          <div className="mt-8">
             <div className="p-6 bg-white rounded-xl border-2 border-zinc-200">
               <div className="flex items-center gap-3 mb-4">
                 <Pencil className="w-6 h-6 text-amber-600" />
@@ -234,35 +257,14 @@ export default function StudentJourneyPage() {
                 )}
               </div>
               <p className="text-zinc-600 mb-4">
-                Draw the word and let AI check your drawing!
+                Draw this word and let AI check your drawing!
               </p>
               <Button
                 onClick={handleStartDrawing}
                 className="w-full bg-amber-500 hover:bg-amber-600"
                 disabled={currentProgress?.drawn}
               >
-                {currentProgress?.drawn ? 'Completed' : 'Start Drawing'}
-              </Button>
-            </div>
-
-            {/* Spelling activity */}
-            <div className="p-6 bg-white rounded-xl border-2 border-zinc-200">
-              <div className="flex items-center gap-3 mb-4">
-                <BookOpen className="w-6 h-6 text-blue-600" />
-                <h3 className="text-xl font-bold text-zinc-800">Spell It</h3>
-                {currentProgress?.spelled && (
-                  <span className="ml-auto text-green-600 font-bold">✓</span>
-                )}
-              </div>
-              <p className="text-zinc-600 mb-4">
-                Arrange the letters to spell the word correctly!
-              </p>
-              <Button
-                onClick={handleStartSpelling}
-                className="w-full bg-blue-500 hover:bg-blue-600"
-                disabled={currentProgress?.spelled}
-              >
-                {currentProgress?.spelled ? 'Completed' : 'Start Spelling'}
+                {currentProgress?.drawn ? 'Completed ✓' : 'Start Drawing'}
               </Button>
             </div>
           </div>
@@ -291,8 +293,8 @@ export default function StudentJourneyPage() {
           </div>
         </motion.div>
 
-        {/* Scenes button (available after completing all words) */}
-        {allWordsComplete && (
+        {/* Scenes button (available after drawing all words) */}
+        {allWordsDrawn && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -300,10 +302,10 @@ export default function StudentJourneyPage() {
           >
             <Sparkles className="w-12 h-12 text-green-600 mx-auto mb-4" />
             <h3 className="text-2xl font-bold text-green-800 mb-2">
-              🎉 All Words Complete!
+              🎉 All Words Drawn!
             </h3>
             <p className="text-green-700 mb-6">
-              You've learned all {words.length} words! Now explore the {wordSet.scene_word} scene!
+              You've drawn all {words.length} words! Now explore the {wordSet.scene_word} scene to find and spell them!
             </p>
             <Button
               onClick={handleViewScenes}
