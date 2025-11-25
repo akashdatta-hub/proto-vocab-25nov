@@ -25,6 +25,7 @@ export default function DrawingPage() {
   const wordId = params.wordId as string;
 
   const [word, setWord] = React.useState<Word | null>(null);
+  const [allWords, setAllWords] = React.useState<Word[]>([]);
   const [showHint, setShowHint] = React.useState(false);
   const [usedHint, setUsedHint] = React.useState(false);
   const [recognizing, setRecognizing] = React.useState(false);
@@ -37,6 +38,7 @@ export default function DrawingPage() {
 
   React.useEffect(() => {
     loadWord();
+    loadAllWords();
     loadStudentId();
   }, [wordId]);
 
@@ -52,6 +54,21 @@ export default function DrawingPage() {
       setWord(data);
     } catch (error) {
       console.error('Error loading word:', error);
+    }
+  };
+
+  const loadAllWords = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('words')
+        .select('*')
+        .eq('word_set_id', setId)
+        .order('order_index');
+
+      if (error) throw error;
+      setAllWords(data || []);
+    } catch (error) {
+      console.error('Error loading all words:', error);
     }
   };
 
@@ -124,7 +141,17 @@ export default function DrawingPage() {
 
   const handleContinue = () => {
     playSound('click', 0.4);
-    router.push(`/student/${setId}`);
+
+    // Find the next word in the set
+    const currentIndex = allWords.findIndex(w => w.id === wordId);
+    if (currentIndex !== -1 && currentIndex < allWords.length - 1) {
+      // Navigate to next word's drawing page
+      const nextWord = allWords[currentIndex + 1];
+      router.push(`/student/${setId}/draw/${nextWord.id}`);
+    } else {
+      // Last word, return to journey page
+      router.push(`/student/${setId}`);
+    }
   };
 
   if (!word) {
